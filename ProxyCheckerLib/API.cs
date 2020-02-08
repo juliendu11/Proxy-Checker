@@ -68,6 +68,8 @@ namespace ProxyCheckerLib
                 }
             }
 
+            ProxyJudge.Judge = goodJudge;
+
             return judgeDead;
         }
 

@@ -6,7 +6,7 @@ namespace ProxyCheckerLib
 {
     public class ProxyJudge
     {
-        public static List<string> Judge { get; } = new List<string>
+        public static List<string> Judge { get; internal set; } = new List<string>
         {
             {"http://www.proxy-listen.de/azenv.php"},
 {"http://mojeip.net.pl/asdfa/azenv.php"},

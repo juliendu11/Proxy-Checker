@@ -71,19 +71,39 @@ namespace ProxyCheckerLib.Classes
             {
                 if (this.proxy.proxyStatus == Enums.ProxyStatus.Ok)
                 {
-                    //It's optinnal
-                    try
+
+                    //Test multiple link for get proxy information
+                    int test = 0;
+                    while(string.IsNullOrEmpty(this.proxy.Country) && test != ProxyInformation.proxyInformationJSON.Count)
                     {
-                        var getCountry = await client.GetAsync("http://ip-api.com/json/" + this.proxy.Address);
-                        if (getCountry.IsSuccessStatusCode)
+                        try
                         {
-                            var getBody = await getCountry.Content.ReadAsStringAsync();
-                            JObject jobject = JObject.Parse(getBody);
-                            this.proxy.Country = (string)jobject["regionName"];
+
+                            var getCountry = await client.GetAsync(ProxyInformation.proxyInformationJSON[test]);
+                            if (getCountry.IsSuccessStatusCode)
+                            {
+                                var getBody = await getCountry.Content.ReadAsStringAsync();
+                                JObject jobject = JObject.Parse(getBody);
+
+                                if (test == 0)
+                                {
+                                    this.proxy.Country = (string)jobject["regionName"];
+                                }
+                                else if (test ==1)
+                                {
+                                    this.proxy.Country = (string)jobject["country_name"];
+                                }
+                                else
+                                {
+
+                                }
+                            }
                         }
+                        catch { }
+
+                        test++;
                     }
-                    catch { }
-                    //
+                      
 
                     string judge = ProxyJudge.GetRandomJudge();
                     var stopwatch = Stopwatch.StartNew();

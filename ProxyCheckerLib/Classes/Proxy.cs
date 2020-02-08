@@ -18,7 +18,7 @@ namespace ProxyCheckerLib.Classes
 
         public Enums.ProxyAnonymous proxyAnonymous { get; internal set; } = Enums.ProxyAnonymous.Unknwow;
         public Enums.ProxySpeed proxySpeed { get; internal set; }
-        public Enums.ProxyStatus proxyStatus { get; internal set; }
+        public Enums.ProxyStatus proxyStatus { get; internal set; } = Enums.ProxyStatus.Dead;
         public Enums.ProxyVersion proxyVersion { get; internal set; }
 
         public Proxy(string proxy)

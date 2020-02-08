@@ -42,6 +42,34 @@ Example in simple console app
             Console.WriteLine($"Address: {lastElement.Address}, Port: {lastElement.Port}, Status: {lastElement.proxyStatus}, Anonymous: {lastElement.proxyAnonymous}, Country: {lastElement.Country}, Time: {lastElement.Time}ms");
         }
 ```
+
+## Parallel tasks
+
+You can change the maximum number of proxy checks in parallel
+
+```c#
+        static ProxyCheckerLib.IAPI proxyCheckerAPI;
+
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Hello World!");
+
+            List<string> proxiesList = File.ReadAllLines("proxies.txt").ToList();
+
+            proxyCheckerAPI = ProxyCheckerLib.API.CreateBuilder()
+                .SetProxyList(proxiesList)
+                .SetMaxParallelTask(20)
+                .Build();
+
+            proxyCheckerAPI.ProxyListWorked.CollectionChanged += ProxyListWorked_CollectionChanged;
+
+             proxyCheckerAPI.TestProxy();
+
+            Console.ReadKey();
+        }
+```
+
+
 # Test proxy judge link
 
 You can test the proxy judge links before launching the test in order to remove the links that no longer work

@@ -86,15 +86,14 @@ namespace ProxyCheckerLib
                  {
                      var p = new Proxy(proxy);
                      var client = new Classes.Client(p, this.myIp);
+
                      try
                      {
                          await client.TestProxy();
                          proxyListWorked.Add(p);
                      }
-                     catch
-                     {
-
-                     }
+                     catch (System.NullReferenceException) { }
+                    
                  });
              });
 

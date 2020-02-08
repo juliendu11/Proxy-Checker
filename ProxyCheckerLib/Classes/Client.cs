@@ -9,6 +9,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ProxyCheckerLib.Classes
@@ -22,6 +23,9 @@ namespace ProxyCheckerLib.Classes
         private Classes.Proxy proxy;
 
         private string myIP;
+
+
+        private CancellationToken token = new CancellationToken();
 
         public Client(Classes.Proxy proxy, string myIP)
         {
@@ -43,7 +47,7 @@ namespace ProxyCheckerLib.Classes
             {
                 Proxy = this.webProxy,
                 UseProxy = true,
-                AllowAutoRedirect =false
+                AllowAutoRedirect =true
             };
             this.client = new HttpClient(clientHandler);
             this.client.Timeout = TimeSpan.FromSeconds(10);
@@ -60,67 +64,110 @@ namespace ProxyCheckerLib.Classes
         /// <returns></returns>
         public async Task TestProxy()
         {
-            this.proxy.proxyStatus = GetProxyStatus();
-
-            long delay = 0;
-
-            //JObject jobject = JObject.Parse(new WebClient().DownloadString("http://ip-api.com/json/" + this.proxy.Address));
-            //this.proxy.Country = (string)jobject["regionName"];
-
-            try
+            await Task.Run(async () =>
             {
+                this.proxy.proxyStatus = GetProxyStatus();
+
+
                 if (this.proxy.proxyStatus == Enums.ProxyStatus.Ok)
                 {
 
-                    //Test multiple link for get proxy information
-                    int test = 0;
-                    while(string.IsNullOrEmpty(this.proxy.Country) && test != ProxyInformation.proxyInformationJSON.Count)
+                    try
                     {
-                        try
-                        {
-
-                            var getCountry = await client.GetAsync(ProxyInformation.proxyInformationJSON[test]);
-                            if (getCountry.IsSuccessStatusCode)
-                            {
-                                var getBody = await getCountry.Content.ReadAsStringAsync();
-                                JObject jobject = JObject.Parse(getBody);
-
-                                if (test == 0)
-                                {
-                                    this.proxy.Country = (string)jobject["regionName"];
-                                }
-                                else if (test ==1)
-                                {
-                                    this.proxy.Country = (string)jobject["country_name"];
-                                }
-                                else
-                                {
-
-                                }
-                            }
-                        }
-                        catch { }
-
-                        test++;
+                       var firstRequest = await client.GetAsync("http://google.com");
                     }
-                      
-
-                    string judge = ProxyJudge.GetRandomJudge();
-                    var stopwatch = Stopwatch.StartNew();
-
-                    var get = await client.GetAsync(judge);
-                    if (!get.IsSuccessStatusCode)
+                    catch
                     {
-                        //Proxy judge error
+                        proxy.proxyStatus = Enums.ProxyStatus.Dead;
                         return;
                     }
 
-                    var content = await get.Content.ReadAsStringAsync();
-                    delay = stopwatch.ElapsedMilliseconds;
 
-                    proxy.Time = delay;
+                    //Test multiple link for get proxy information
+                    int test = 0;
+                    while (string.IsNullOrEmpty(this.proxy.Country) && test != ProxyInformation.proxyInformationJSON.Count)
+                    {
+                        HttpResponseMessage getCountry;
+                        try
+                        {
+                            getCountry = await client.GetAsync(ProxyInformation.proxyInformationJSON[test], cancellationToken: token);
+                        }
+                        catch { continue; }
+                        if (token.IsCancellationRequested)
+                        {
+                            continue;
+                        }
+                        if (getCountry.IsSuccessStatusCode)
+                        {
+                            var getBody = await getCountry.Content.ReadAsStringAsync();
+                            JObject jobject = JObject.Parse(getBody);
 
-                    var matches = GetMatches(content);
+                            if (test == 0)
+                            {
+                                this.proxy.Country = (string)jobject["regionName"];
+                            }
+                            else if (test == 1)
+                            {
+                                this.proxy.Country = (string)jobject["country_name"];
+                            }
+                            else
+                            {
+
+                            }
+                        }
+                        test++;
+                    }
+
+
+                    string actualJudge = "";
+                    string previousJudgeUsed = "";
+
+                    bool noJudgeSelected = true;
+
+                    var getJudge = ProxyJudge.GetJudge(previousJudgeUsed);
+
+                    string bodyJudge = "";
+
+                    Stopwatch stopwatch = null;
+
+                    do
+                    {
+                        try
+                        {
+                            getJudge = ProxyJudge.GetJudge(previousJudgeUsed);
+
+                            actualJudge = getJudge.judge;
+                            previousJudgeUsed = getJudge.judge;
+
+                           stopwatch = Stopwatch.StartNew();
+
+                            var get = client.GetAsync(actualJudge, cancellationToken: token);
+                            if (token.IsCancellationRequested || get.IsCanceled || get.IsFaulted || get.Status == TaskStatus.Faulted)
+                            {
+                                proxy.proxyStatus = Enums.ProxyStatus.Dead;
+                                continue;
+                            }
+
+                            bodyJudge = await get.GetAwaiter().GetResult().Content.ReadAsStringAsync();
+                            noJudgeSelected = false;
+                            proxy.Time = stopwatch.ElapsedMilliseconds;
+                        }
+                        catch
+                        {
+                            continue;
+                        }
+                    }
+                    while (noJudgeSelected == true && getJudge.result == false);
+
+
+                    if (!getJudge.result && noJudgeSelected== true)
+                    {
+                        proxy.proxyStatus = Enums.ProxyStatus.Dead;
+                        return;
+                    }
+                   
+
+                    var matches = GetMatches(bodyJudge);
 
                     if (!string.IsNullOrEmpty(GetValue(matches, "REMOTE_ADDR")))
                     {
@@ -142,29 +189,12 @@ namespace ProxyCheckerLib.Classes
                     {
                         this.proxy.proxyAnonymous = Enums.ProxyAnonymous.Hight;
                     }
-
-                    //this.proxy.proxyAnonymous = string.IsNullOrEmpty(GetValue(matches, "REMOTE_ADDR")) ? Enums.ProxyAnonymous.Hight : Enums.ProxyAnonymous.Medium;
                 }
-            }
-            catch (IOException)
-            {
-                this.proxy.proxyStatus = Enums.ProxyStatus.Dead;
-            }
-            catch (System.Net.Http.HttpRequestException)
-            {
-                this.proxy.proxyStatus = Enums.ProxyStatus.Dead;
-            }
-            catch (SocketException)
-            {
-                this.proxy.proxyStatus = Enums.ProxyStatus.Dead;
-            }
-            catch (System.Threading.Tasks.TaskCanceledException)
-            {
-                this.proxy.proxyStatus = Enums.ProxyStatus.Dead;
-            }
+            });
         }
 
-       private Enums.ProxyStatus GetProxyStatus()
+
+        private Enums.ProxyStatus GetProxyStatus()
         {
             Enums.ProxyStatus proxy = Enums.ProxyStatus.Ok;
 

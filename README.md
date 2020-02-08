@@ -2,11 +2,13 @@
 
 It's simple Proxy Checker, get proxy status, anonymous level, type, time, country
 
+ONLY HTTP/S PROXIES
+
 - [x] Proxy status
 - [x] Proxy anonymous level 
 - [X] Proxy country
 - [ ] Type 
-- [ ] Time 
+- [X] Proxy Time 
 
 # How to use ?
 

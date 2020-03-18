@@ -100,6 +100,26 @@ namespace ProxyCheckerLib
 
         }
 
+        public async Task<bool> TestOneProxy(string proxy)
+        {
+            return await Task.Run(async () =>
+            {
+                var p = new Proxy(proxy);
+                var client = new Classes.Client(p, this.myIp);
+
+                try
+                {
+                    await client.TestProxy();
+
+                    return true;
+                }
+                catch (System.NullReferenceException) 
+                {
+                    return false;
+                }
+            });
+        }
+
         private string GetIP()
         {
             string externalIP = "";

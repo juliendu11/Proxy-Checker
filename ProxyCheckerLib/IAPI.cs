@@ -19,5 +19,7 @@ namespace ProxyCheckerLib
         API Build();
 
         Task<int> VerifyProxyJudge();
+
+        Task<bool> TestOneProxy(string proxy);
     }
 }

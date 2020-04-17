@@ -10,12 +10,21 @@ ONLY HTTP/S PROXIES
 - [ ] Type 
 - [X] Proxy Time 
 
+## Install
+
+```
+PM> Install-Package ProxyChecker -Version 1.0.1
+```
+
 # How to use ?
 
 Example in simple console app
 
 ```c#
-        static ProxyCheckerLib.IAPI proxyCheckerAPI;
+using ProxyCheckerLib;
+
+
+        static IAPI proxyCheckerAPI;
 
         static void Main(string[] args)
         {

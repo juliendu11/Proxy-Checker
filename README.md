@@ -13,7 +13,7 @@ ONLY HTTP/S PROXIES
 ## Install
 
 ```
-PM> Install-Package SimplyTaskScheduler -Version 1.0.0
+PM> Install-Package ProxyChecker -Version 1.0.1
 ```
 
 # How to use ?
